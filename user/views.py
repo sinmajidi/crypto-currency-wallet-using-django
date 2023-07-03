@@ -20,7 +20,7 @@ class Signin(APIView):
                 return redirect('/user/login')
         if check_password_hash(user.password, request.data['password']):
             token = jwt.encode(
-                {'email': user.email, 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)},
+                {'email': user.email, 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=60)},
                 SECRET_KEY)
             response = redirect('/')
             response.set_cookie('user', token.decode("utf-8"))
@@ -69,10 +69,16 @@ class start_invesment(APIView):
     def get(self, request):
         if request.COOKIES['user']:
             token=request.COOKIES['user']
-            data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            try:
+                data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            except:
+                response = redirect('/user/login')
+                response.delete_cookie('user')
+                return response
             current_user = User.objects.filter(email=data['email']).first()
-
-            context={"public_address":current_user.public_address,'username':current_user.username}
+            if not current_user:
+                return redirect('/user/login')
+            context={"public_address":current_user.public_address,'username':current_user.username,'login':True}
             return render(request, 'wallet/wallet.html',context=context)
 
         else:
